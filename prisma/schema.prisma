@@ -8,15 +8,77 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  name                String
+  email               String   @unique
+  password            String
+  role                Role     @default(USER)
+  hasCompletedProfile Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  motherData    MotherData?
+  spouseData    SpouseData?
+  childrenData  ChildData[]
 
   @@map("users")
+}
+
+model MotherData {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  fullName        String
+  phoneNumber     String
+  nik             String
+  birthPlace      String
+  birthDate       DateTime
+  education       String
+  occupation      String
+  bloodType       String
+  jkn             String
+  facilityTK1     String
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("mother_data")
+}
+
+model SpouseData {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  fullName        String
+  nik             String
+  occupation      String
+  phoneNumber     String
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("spouse_data")
+}
+
+model ChildData {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  fullName          String
+  nik               String
+  birthCertificate  String
+  childOrder        Int
+  bloodType         String
+  birthPlace        String
+  birthDate         DateTime
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("children_data")
 }
 
 enum Role {
