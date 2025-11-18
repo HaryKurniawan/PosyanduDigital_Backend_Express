@@ -43,6 +43,7 @@ const register = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      hasCompletedProfile: user.hasCompletedProfile,
       token: generateToken(user.id)
     });
   } catch (error) {
@@ -51,7 +52,7 @@ const register = async (req, res) => {
   }
 };
 
-// Login user
+// Login user - UPDATED
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -79,6 +80,7 @@ const login = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      hasCompletedProfile: user.hasCompletedProfile,
       token: generateToken(user.id)
     });
   } catch (error) {
@@ -97,6 +99,7 @@ const getProfile = async (req, res) => {
         name: true,
         email: true,
         role: true,
+        hasCompletedProfile: true,
         createdAt: true,
         updatedAt: true
       }
@@ -117,6 +120,7 @@ const getAllUsers = async (req, res) => {
         name: true,
         email: true,
         role: true,
+        hasCompletedProfile: true,
         createdAt: true
       },
       orderBy: {

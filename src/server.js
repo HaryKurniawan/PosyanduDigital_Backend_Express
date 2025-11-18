@@ -2,8 +2,10 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
-const familyDataRoutes = require('./routes/familyDataRoutes'); // ADD THIS
+const familyDataRoutes = require('./routes/familyDataRoutes');
+const adminRoutes = require('./routes/adminRoutes'); // NEW
 const prisma = require('./config/prisma');
+const { validateApiKey } = require('./middleware/apiKeyMiddleware');
 
 dotenv.config();
 
@@ -13,13 +15,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/family', familyDataRoutes); // ADD THIS
-
+// Public route (tanpa API key)
 app.get('/', (req, res) => {
   res.json({ message: 'Posyandu API is running' });
 });
+
+// Protected routes dengan API key
+app.use('/api/auth', validateApiKey, authRoutes);
+app.use('/api/family', validateApiKey, familyDataRoutes);
+app.use('/api/admin', validateApiKey, adminRoutes); // NEW
 
 const PORT = process.env.PORT || 5000;
 
