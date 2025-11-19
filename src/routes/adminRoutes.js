@@ -7,9 +7,12 @@ const {
 } = require('../controllers/adminController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
+
+router.use(protect, admin);
 // All routes require authentication and admin role
 router.get('/children', protect, admin, getAllChildren);
 router.get('/child/:childId/family-data', protect, admin, getFamilyDataByChildId);
 router.get('/families', protect, admin, getAllFamilies);
 
 module.exports = router;
+

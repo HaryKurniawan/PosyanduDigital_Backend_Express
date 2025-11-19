@@ -20,6 +20,7 @@ model User {
   motherData    MotherData?
   spouseData    SpouseData?
   childrenData  ChildData[]
+  registrations PosyanduRegistration[]
 
   @@map("users")
 }
@@ -68,12 +69,15 @@ model ChildData {
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   fullName          String
-  nik               String
+  nik               String   @unique  
   birthCertificate  String
   childOrder        Int
   bloodType         String
   birthPlace        String
   birthDate         DateTime
+  
+  examinations      ChildExamination[]
+  registrations     PosyanduRegistration[]
   
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -81,7 +85,69 @@ model ChildData {
   @@map("children_data")
 }
 
+model PosyanduSchedule {
+  id          String   @id @default(uuid())
+  scheduleDate DateTime
+  location    String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  examinations  ChildExamination[]
+  registrations PosyanduRegistration[]
+
+  @@map("posyandu_schedules")
+}
+
+model PosyanduRegistration {
+  id          String   @id @default(uuid())
+  scheduleId  String
+  schedule    PosyanduSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  childId     String
+  child       ChildData @relation(fields: [childId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  status      RegistrationStatus @default(REGISTERED)
+  registeredAt DateTime @default(now())
+  notes       String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([scheduleId, childId])
+  @@map("posyandu_registrations")
+}
+
+model ChildExamination {
+  id                String   @id @default(uuid())
+  childId           String
+  child             ChildData @relation(fields: [childId], references: [id], onDelete: Cascade)
+  scheduleId        String
+  schedule          PosyanduSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  
+  examinationDate   DateTime
+  weight            Float
+  height            Float
+  headCircumference Float
+  armCircumference  Float
+  immunization      String
+  notes             String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("child_examinations")
+}
+
 enum Role {
   USER
   ADMIN
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  ATTENDED
+  CANCELLED
 }

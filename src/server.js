@@ -6,6 +6,8 @@ const familyDataRoutes = require('./routes/familyDataRoutes');
 const adminRoutes = require('./routes/adminRoutes'); // NEW
 const prisma = require('./config/prisma');
 const { validateApiKey } = require('./middleware/apiKeyMiddleware');
+const posyanduRoutes = require('./routes/posyanduRoutes');
+
 
 dotenv.config();
 
@@ -23,7 +25,9 @@ app.get('/', (req, res) => {
 // Protected routes dengan API key
 app.use('/api/auth', validateApiKey, authRoutes);
 app.use('/api/family', validateApiKey, familyDataRoutes);
-app.use('/api/admin', validateApiKey, adminRoutes); // NEW
+app.use('/api/admin', validateApiKey, adminRoutes); 
+app.use('/api/posyandu', validateApiKey, posyanduRoutes);
+app.use('/api/admin', require('./routes/adminRoutes'));
 
 const PORT = process.env.PORT || 5000;
 
@@ -34,3 +38,6 @@ app.listen(PORT, () => {
 process.on('beforeExit', async () => {
   await prisma.$disconnect();
 });
+
+// backend/server.js
+
