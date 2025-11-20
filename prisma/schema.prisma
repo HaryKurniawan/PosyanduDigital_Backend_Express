@@ -7,6 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================
+// USER & FAMILY DATA MODELS
+// ============================================
+
 model User {
   id                  String   @id @default(uuid())
   name                String
@@ -17,10 +21,11 @@ model User {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   
-  motherData    MotherData?
-  spouseData    SpouseData?
-  childrenData  ChildData[]
-  registrations PosyanduRegistration[]
+  // Relations
+  motherData         MotherData?
+  spouseData         SpouseData?
+  childrenData       ChildData[]
+  registrations      PosyanduRegistration[]
 
   @@map("users")
 }
@@ -76,14 +81,20 @@ model ChildData {
   birthPlace        String
   birthDate         DateTime
   
+  // Relations
   examinations      ChildExamination[]
   registrations     PosyanduRegistration[]
+  immunizations     ChildImmunization[]
   
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   @@map("children_data")
 }
+
+// ============================================
+// POSYANDU SCHEDULE & REGISTRATION MODELS
+// ============================================
 
 model PosyanduSchedule {
   id          String   @id @default(uuid())
@@ -94,8 +105,10 @@ model PosyanduSchedule {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  examinations  ChildExamination[]
-  registrations PosyanduRegistration[]
+  // Relations
+  examinations      ChildExamination[]
+  registrations     PosyanduRegistration[]
+  immunizations     ChildImmunization[]
 
   @@map("posyandu_schedules")
 }
@@ -120,6 +133,10 @@ model PosyanduRegistration {
   @@map("posyandu_registrations")
 }
 
+// ============================================
+// EXAMINATION MODEL
+// ============================================
+
 model ChildExamination {
   id                String   @id @default(uuid())
   childId           String
@@ -132,7 +149,7 @@ model ChildExamination {
   height            Float
   headCircumference Float
   armCircumference  Float
-  immunization      String
+  immunization      String?
   notes             String?
   
   createdAt         DateTime @default(now())
@@ -140,6 +157,72 @@ model ChildExamination {
 
   @@map("child_examinations")
 }
+
+// ============================================
+// IMMUNIZATION MODELS (NEW)
+// ============================================
+
+model ImmunizationTemplate {
+  id              String   @id @default(uuid())
+  ageRange        String   // e.g., "0-1 Bulan"
+  ageInMonths     Int      // e.g., 0
+  description     String?
+  isActive        Boolean  @default(true)
+  
+  // Relations
+  vaccines        ImmunizationVaccine[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("immunization_templates")
+}
+
+model ImmunizationVaccine {
+  id              String   @id @default(uuid())
+  templateId      String
+  template        ImmunizationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  
+  name            String   // e.g., "HB-0 (Hepatitis B)"
+  dose            String   // e.g., "0" or "1"
+  description     String   // e.g., "Vaksin awal untuk Hepatitis B"
+  recommendedAge  String   // e.g., "0 hari"
+  
+  // Relations
+  childImmunizations ChildImmunization[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("immunization_vaccines")
+}
+
+model ChildImmunization {
+  id              String   @id @default(uuid())
+  childId         String
+  child           ChildData @relation(fields: [childId], references: [id], onDelete: Cascade)
+  
+  vaccineId       String
+  vaccine         ImmunizationVaccine @relation(fields: [vaccineId], references: [id], onDelete: Restrict)
+  
+  scheduleId      String?
+  schedule        PosyanduSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  
+  vaccinationDate DateTime
+  status          VaccinationStatus @default(PENDING)
+  notes           String?
+  administeredBy  String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([childId, vaccineId, vaccinationDate])
+  @@map("child_immunizations")
+}
+
+// ============================================
+// ENUMS
+// ============================================
 
 enum Role {
   USER
@@ -150,4 +233,11 @@ enum RegistrationStatus {
   REGISTERED
   ATTENDED
   CANCELLED
+}
+
+enum VaccinationStatus {
+  PENDING
+  COMPLETED
+  MISSED
+  POSTPONED
 }
