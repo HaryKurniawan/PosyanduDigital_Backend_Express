@@ -2,7 +2,6 @@ const prisma = require('../config/prisma');
 
 // ============ ADMIN FUNCTIONS ============
 
-// Create new posyandu schedule
 const createSchedule = async (req, res) => {
   try {
     const { scheduleDate, location, description } = req.body;
@@ -21,7 +20,6 @@ const createSchedule = async (req, res) => {
   }
 };
 
-// Get all schedules (for admin)
 const getAllSchedules = async (req, res) => {
   try {
     const schedules = await prisma.posyanduSchedule.findMany({
@@ -63,7 +61,6 @@ const getAllSchedules = async (req, res) => {
   }
 };
 
-// Get schedule detail with registrations and examinations
 const getScheduleDetail = async (req, res) => {
   try {
     const { scheduleId } = req.params;
@@ -115,7 +112,6 @@ const getScheduleDetail = async (req, res) => {
   }
 };
 
-// Search child by NIK
 const searchChildByNIK = async (req, res) => {
   try {
     const { nik } = req.params;
@@ -142,7 +138,6 @@ const searchChildByNIK = async (req, res) => {
   }
 };
 
-// Get all children (for admin)
 const getAllChildren = async (req, res) => {
   try {
     const children = await prisma.childData.findMany({
@@ -165,7 +160,7 @@ const getAllChildren = async (req, res) => {
   }
 };
 
-// Create child examination
+// ✅ UPDATED - Create child examination WITH VACCINATION RECORDING
 const createExamination = async (req, res) => {
   try {
     const {
@@ -176,7 +171,8 @@ const createExamination = async (req, res) => {
       headCircumference,
       armCircumference,
       immunization,
-      notes
+      notes,
+      vaccineIds // ✅ Array of vaccine IDs
     } = req.body;
 
     // Check if registration exists and update status to ATTENDED
@@ -195,6 +191,7 @@ const createExamination = async (req, res) => {
       });
     }
 
+    // Create examination record
     const examination = await prisma.childExamination.create({
       data: {
         childId,
@@ -213,13 +210,61 @@ const createExamination = async (req, res) => {
       }
     });
 
-    res.json({ message: 'Examination saved successfully', data: examination });
+    // ✅ NEW - Record vaccinations if provided
+    let recordedVaccines = [];
+    if (vaccineIds && Array.isArray(vaccineIds) && vaccineIds.length > 0) {
+      for (const vaccineId of vaccineIds) {
+        try {
+          // Check if vaccine already recorded today
+          const existing = await prisma.childImmunization.findFirst({
+            where: {
+              childId,
+              vaccineId,
+              vaccinationDate: {
+                gte: new Date(new Date().setHours(0, 0, 0, 0)),
+                lt: new Date(new Date().setHours(23, 59, 59, 999))
+              }
+            }
+          });
+
+          if (!existing) {
+            const vaccineRecord = await prisma.childImmunization.create({
+              data: {
+                childId,
+                vaccineId,
+                scheduleId,
+                vaccinationDate: new Date(),
+                status: 'COMPLETED',
+                administeredBy: req.user?.name || 'Admin Posyandu',
+                notes: `Diberikan saat pemeriksaan di ${examination.schedule.location}`
+              },
+              include: {
+                vaccine: true
+              }
+            });
+            recordedVaccines.push(vaccineRecord);
+          }
+        } catch (vaccineError) {
+          console.error(`Error recording vaccine ${vaccineId}:`, vaccineError);
+          // Continue with other vaccines even if one fails
+        }
+      }
+    }
+
+    res.json({ 
+      message: 'Examination saved successfully', 
+      data: {
+        examination,
+        recordedVaccines,
+        vaccineCount: recordedVaccines.length
+      }
+    });
   } catch (error) {
+    console.error('Error in createExamination:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// Get examinations by schedule
 const getExaminationsBySchedule = async (req, res) => {
   try {
     const { scheduleId } = req.params;
@@ -249,9 +294,57 @@ const getExaminationsBySchedule = async (req, res) => {
   }
 };
 
+// ✅ NEW - Get examination detail with vaccines
+const getExaminationDetail = async (req, res) => {
+  try {
+    const { examinationId } = req.params;
+
+    const examination = await prisma.childExamination.findUnique({
+      where: { id: examinationId },
+      include: {
+        child: {
+          include: {
+            user: {
+              include: {
+                motherData: true
+              }
+            }
+          }
+        },
+        schedule: true
+      }
+    });
+
+    if (!examination) {
+      return res.status(404).json({ message: 'Examination not found' });
+    }
+
+    // Get vaccines given during this examination
+    const vaccines = await prisma.childImmunization.findMany({
+      where: {
+        childId: examination.childId,
+        scheduleId: examination.scheduleId,
+        vaccinationDate: {
+          gte: new Date(new Date(examination.examinationDate).setHours(0, 0, 0, 0)),
+          lt: new Date(new Date(examination.examinationDate).setHours(23, 59, 59, 999))
+        }
+      },
+      include: {
+        vaccine: true
+      }
+    });
+
+    res.json({
+      ...examination,
+      vaccinesGiven: vaccines
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 // ============ USER FUNCTIONS ============
 
-// Get upcoming schedules (for user registration)
 const getUpcomingSchedules = async (req, res) => {
   try {
     const today = new Date();
@@ -287,18 +380,15 @@ const getUpcomingSchedules = async (req, res) => {
   }
 };
 
-// Register for posyandu
 const registerForPosyandu = async (req, res) => {
   try {
     const { scheduleId, childId } = req.body;
     const userId = req.user.id;
 
-    // Validasi input
     if (!scheduleId || !childId) {
       return res.status(400).json({ message: 'Schedule ID and Child ID are required' });
     }
 
-    // Check if schedule exists
     const schedule = await prisma.posyanduSchedule.findUnique({
       where: { id: scheduleId }
     });
@@ -307,7 +397,6 @@ const registerForPosyandu = async (req, res) => {
       return res.status(404).json({ message: 'Schedule not found' });
     }
 
-    // Check if child exists and belongs to user
     const child = await prisma.childData.findUnique({
       where: { id: childId }
     });
@@ -320,7 +409,6 @@ const registerForPosyandu = async (req, res) => {
       return res.status(403).json({ message: 'You do not have permission to register this child' });
     }
 
-    // PERBAIKAN: Check existing registration dengan unique constraint
     const existingRegistration = await prisma.posyanduRegistration.findUnique({
       where: {
         scheduleId_childId: {
@@ -330,7 +418,6 @@ const registerForPosyandu = async (req, res) => {
       }
     });
 
-    // Jika sudah ada dan bukan CANCELLED, tolak
     if (existingRegistration && existingRegistration.status !== 'CANCELLED') {
       return res.status(400).json({ 
         message: 'This child is already registered for this schedule',
@@ -338,13 +425,12 @@ const registerForPosyandu = async (req, res) => {
       });
     }
 
-    // Jika sudah ada tapi CANCELLED, update status jadi REGISTERED lagi
     if (existingRegistration && existingRegistration.status === 'CANCELLED') {
       const updatedRegistration = await prisma.posyanduRegistration.update({
         where: { id: existingRegistration.id },
         data: { 
           status: 'REGISTERED',
-          registeredAt: new Date() // Update waktu registrasi
+          registeredAt: new Date()
         },
         include: {
           child: {
@@ -372,7 +458,6 @@ const registerForPosyandu = async (req, res) => {
       });
     }
 
-    // Create new registration jika belum ada sama sekali
     const registration = await prisma.posyanduRegistration.create({
       data: {
         scheduleId,
@@ -412,13 +497,12 @@ const registerForPosyandu = async (req, res) => {
     });
   }
 };
-// Cancel registration
+
 const cancelRegistration = async (req, res) => {
   try {
     const { registrationId } = req.params;
     const userId = req.user.id;
 
-    // Check if registration belongs to user
     const registration = await prisma.posyanduRegistration.findFirst({
       where: {
         id: registrationId,
@@ -445,7 +529,6 @@ const cancelRegistration = async (req, res) => {
   }
 };
 
-// Get my registrations
 const getMyRegistrations = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -469,7 +552,7 @@ const getMyRegistrations = async (req, res) => {
   }
 };
 
-// Get examination history for user's children
+// ✅ UPDATED - Get examination history with vaccines
 const getMyChildrenExaminations = async (req, res) => {
   try {
     const examinations = await prisma.childExamination.findMany({
@@ -481,6 +564,7 @@ const getMyChildrenExaminations = async (req, res) => {
       include: {
         child: {
           select: {
+            id: true,
             fullName: true,
             nik: true,
             birthDate: true
@@ -498,13 +582,36 @@ const getMyChildrenExaminations = async (req, res) => {
       }
     });
 
-    res.json(examinations);
+    // ✅ Get vaccines for each examination
+    const examinationsWithVaccines = await Promise.all(
+      examinations.map(async (exam) => {
+        const vaccines = await prisma.childImmunization.findMany({
+          where: {
+            childId: exam.childId,
+            scheduleId: exam.scheduleId,
+            vaccinationDate: {
+              gte: new Date(new Date(exam.examinationDate).setHours(0, 0, 0, 0)),
+              lt: new Date(new Date(exam.examinationDate).setHours(23, 59, 59, 999))
+            }
+          },
+          include: {
+            vaccine: true
+          }
+        });
+
+        return {
+          ...exam,
+          vaccinesGiven: vaccines
+        };
+      })
+    );
+
+    res.json(examinationsWithVaccines);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// Get latest examination for each child
 const getLatestExaminations = async (req, res) => {
   try {
     const children = await prisma.childData.findMany({
@@ -536,6 +643,7 @@ module.exports = {
   getAllChildren,
   createExamination,
   getExaminationsBySchedule,
+  getExaminationDetail, // ✅ NEW
   getUpcomingSchedules,
   registerForPosyandu,
   cancelRegistration,

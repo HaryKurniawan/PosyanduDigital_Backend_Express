@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-// Import posyandu controller
 const {
   createSchedule,
   getAllSchedules,
@@ -10,6 +9,7 @@ const {
   getAllChildren,
   createExamination,
   getExaminationsBySchedule,
+  getExaminationDetail, // ✅ NEW
   getUpcomingSchedules,
   registerForPosyandu,
   cancelRegistration,
@@ -18,9 +18,7 @@ const {
   getLatestExaminations
 } = require('../controllers/posyanduController');
 
-// Import immunization controller (FILE TERPISAH)
 const immunizationController = require('../controllers/immunizationController');
-
 const { protect, admin } = require('../middleware/authMiddleware');
 
 // ============================================
@@ -32,24 +30,19 @@ router.get('/schedule/:scheduleId', protect, admin, getScheduleDetail);
 router.get('/search-child/:nik', protect, admin, searchChildByNIK);
 router.post('/examination', protect, admin, createExamination);
 router.get('/schedule/:scheduleId/examinations', protect, admin, getExaminationsBySchedule);
+router.get('/examination/:examinationId', protect, admin, getExaminationDetail); // ✅ NEW
 
 // ============================================
 // IMMUNIZATION ROUTES
 // ============================================
-
-// Public - untuk dropdown di form
 router.get('/immunization/templates', immunizationController.getAllImmunizationTemplates);
-
-// Admin - manage templates
 router.post('/immunization/template', protect, admin, immunizationController.createImmunizationTemplate);
 
-// Child immunization records
 router.get('/child/:childId/immunizations', protect, immunizationController.getChildImmunizations);
 router.post('/child/immunization', protect, admin, immunizationController.recordChildImmunization);
 router.put('/immunization/:immunizationId', protect, admin, immunizationController.updateChildImmunization);
 router.delete('/immunization/:immunizationId', protect, admin, immunizationController.deleteChildImmunization);
 
-// Immunization roadmap & status
 router.get('/child/:childId/immunization-roadmap', protect, immunizationController.getChildImmunizationRoadmap);
 router.get('/immunization/status/all', protect, admin, immunizationController.getAllChildrenImmunizationStatus);
 

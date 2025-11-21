@@ -1,6 +1,7 @@
-// prisma/seed.js
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// File: scripts/seedImmunization.js
+// Run: node scripts/seedImmunization.js
+
+const prisma = require('../config/prisma');
 
 const immunizationData = [
   {
@@ -141,43 +142,36 @@ async function seedImmunization() {
   try {
     console.log('🌱 Starting immunization templates seeding...');
 
-    // Hapus data yang berhubungan agar tidak ada FK conflicts
-    await prisma.$transaction([
-      prisma.childImmunization.deleteMany(),
-      prisma.immunizationVaccine.deleteMany(),
-      prisma.immunizationTemplate.deleteMany()
-    ]);
+    // Delete existing data
+    await prisma.immunizationVaccine.deleteMany({});
+    await prisma.immunizationTemplate.deleteMany({});
+    console.log('✅ Cleared existing data');
 
-    console.log('✅ Cleared existing immunization-related data');
-
-    // Buat template + vaksin secara nested (create)
+    // Create templates with vaccines
     for (const template of immunizationData) {
       const created = await prisma.immunizationTemplate.create({
         data: {
           ageRange: template.ageRange,
           ageInMonths: template.ageInMonths,
-          description: template.description ?? null,
-          isActive: template.isActive ?? true,
           vaccines: {
-            create: template.vaccines.map(v => ({
-              name: v.name,
-              dose: v.dose,
-              description: v.description,
-              recommendedAge: v.recommendedAge
-            }))
+            createMany: {
+              data: template.vaccines
+            }
           }
         },
-        include: { vaccines: true }
+        include: {
+          vaccines: true
+        }
       });
 
-      console.log(`✅ Created template: ${created.ageRange} (${created.vaccines.length} vaccines)`);
+      console.log(`✅ Created: ${created.ageRange} with ${created.vaccines.length} vaccines`);
     }
 
     console.log('✨ Seeding completed successfully!');
     console.log(`📊 Total templates created: ${immunizationData.length}`);
+    
   } catch (error) {
     console.error('❌ Error seeding immunization data:', error);
-    process.exitCode = 1;
   } finally {
     await prisma.$disconnect();
   }
