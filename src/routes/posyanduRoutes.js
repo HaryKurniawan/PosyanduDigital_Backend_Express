@@ -9,7 +9,7 @@ const {
   getAllChildren,
   createExamination,
   getExaminationsBySchedule,
-  getExaminationDetail, // ✅ NEW
+  getExaminationDetail,
   getUpcomingSchedules,
   registerForPosyandu,
   cancelRegistration,
@@ -19,32 +19,32 @@ const {
 } = require('../controllers/posyanduController');
 
 const immunizationController = require('../controllers/immunizationController');
-const { protect, admin } = require('../middleware/authMiddleware');
+const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 // ============================================
 // ADMIN ROUTES
 // ============================================
-router.post('/schedule', protect, admin, createSchedule);
-router.get('/schedules', protect, admin, getAllSchedules);
-router.get('/schedule/:scheduleId', protect, admin, getScheduleDetail);
-router.get('/search-child/:nik', protect, admin, searchChildByNIK);
-router.post('/examination', protect, admin, createExamination);
-router.get('/schedule/:scheduleId/examinations', protect, admin, getExaminationsBySchedule);
-router.get('/examination/:examinationId', protect, admin, getExaminationDetail); // ✅ NEW
+router.post('/schedule', protect, adminOnly, createSchedule);
+router.get('/schedules', protect, adminOnly, getAllSchedules);
+router.get('/schedule/:scheduleId', protect, adminOnly, getScheduleDetail);
+router.get('/search-child/:nik', protect, adminOnly, searchChildByNIK);
+router.post('/examination', protect, adminOnly, createExamination);
+router.get('/schedule/:scheduleId/examinations', protect, adminOnly, getExaminationsBySchedule);
+router.get('/examination/:examinationId', protect, adminOnly, getExaminationDetail);
 
 // ============================================
 // IMMUNIZATION ROUTES
 // ============================================
 router.get('/immunization/templates', immunizationController.getAllImmunizationTemplates);
-router.post('/immunization/template', protect, admin, immunizationController.createImmunizationTemplate);
+router.post('/immunization/template', protect, adminOnly, immunizationController.createImmunizationTemplate);
 
 router.get('/child/:childId/immunizations', protect, immunizationController.getChildImmunizations);
-router.post('/child/immunization', protect, admin, immunizationController.recordChildImmunization);
-router.put('/immunization/:immunizationId', protect, admin, immunizationController.updateChildImmunization);
-router.delete('/immunization/:immunizationId', protect, admin, immunizationController.deleteChildImmunization);
+router.post('/child/immunization', protect, adminOnly, immunizationController.recordChildImmunization);
+router.put('/immunization/:immunizationId', protect, adminOnly, immunizationController.updateChildImmunization);
+router.delete('/immunization/:immunizationId', protect, adminOnly, immunizationController.deleteChildImmunization);
 
 router.get('/child/:childId/immunization-roadmap', protect, immunizationController.getChildImmunizationRoadmap);
-router.get('/immunization/status/all', protect, admin, immunizationController.getAllChildrenImmunizationStatus);
+router.get('/immunization/status/all', protect, adminOnly, immunizationController.getAllChildrenImmunizationStatus);
 
 // ============================================
 // USER ROUTES

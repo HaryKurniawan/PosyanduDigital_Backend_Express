@@ -20,7 +20,7 @@ model User {
   hasCompletedProfile Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
-  
+
   // Relations
   motherData         MotherData?
   spouseData         SpouseData?
@@ -34,7 +34,7 @@ model MotherData {
   id              String   @id @default(uuid())
   userId          String   @unique
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   fullName        String
   phoneNumber     String
   nik             String
@@ -45,7 +45,7 @@ model MotherData {
   bloodType       String
   jkn             String
   facilityTK1     String
-  
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -56,12 +56,12 @@ model SpouseData {
   id              String   @id @default(uuid())
   userId          String   @unique
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   fullName        String
   nik             String
   occupation      String
   phoneNumber     String
-  
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -72,20 +72,21 @@ model ChildData {
   id                String   @id @default(uuid())
   userId            String
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   fullName          String
-  nik               String   @unique  
+  nik               String   @unique
   birthCertificate  String
   childOrder        Int
   bloodType         String
   birthPlace        String
   birthDate         DateTime
-  
+
   // Relations
   examinations      ChildExamination[]
   registrations     PosyanduRegistration[]
   immunizations     ChildImmunization[]
-  
+  kpspScreenings    KPSPScreening[]          
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -104,7 +105,7 @@ model PosyanduSchedule {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   // Relations
   examinations      ChildExamination[]
   registrations     PosyanduRegistration[]
@@ -121,14 +122,14 @@ model PosyanduRegistration {
   child       ChildData @relation(fields: [childId], references: [id], onDelete: Cascade)
   userId      String
   user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   status      RegistrationStatus @default(REGISTERED)
   registeredAt DateTime @default(now())
   notes       String?
-  
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   @@unique([scheduleId, childId])
   @@map("posyandu_registrations")
 }
@@ -143,7 +144,7 @@ model ChildExamination {
   child             ChildData @relation(fields: [childId], references: [id], onDelete: Cascade)
   scheduleId        String
   schedule          PosyanduSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  
+
   examinationDate   DateTime
   weight            Float
   height            Float
@@ -151,7 +152,7 @@ model ChildExamination {
   armCircumference  Float
   immunization      String?
   notes             String?
-  
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -164,14 +165,14 @@ model ChildExamination {
 
 model ImmunizationTemplate {
   id              String   @id @default(uuid())
-  ageRange        String   // e.g., "0-1 Bulan"
-  ageInMonths     Int      // e.g., 0
+  ageRange        String   
+  ageInMonths     Int      
   description     String?
   isActive        Boolean  @default(true)
-  
+
   // Relations
   vaccines        ImmunizationVaccine[]
-  
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -182,15 +183,15 @@ model ImmunizationVaccine {
   id              String   @id @default(uuid())
   templateId      String
   template        ImmunizationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  
-  name            String   // e.g., "HB-0 (Hepatitis B)"
-  dose            String   // e.g., "0" or "1"
-  description     String   // e.g., "Vaksin awal untuk Hepatitis B"
-  recommendedAge  String   // e.g., "0 hari"
-  
+
+  name            String   
+  dose            String   
+  description     String   
+  recommendedAge  String   
+
   // Relations
   childImmunizations ChildImmunization[]
-  
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -201,23 +202,111 @@ model ChildImmunization {
   id              String   @id @default(uuid())
   childId         String
   child           ChildData @relation(fields: [childId], references: [id], onDelete: Cascade)
-  
+
   vaccineId       String
   vaccine         ImmunizationVaccine @relation(fields: [vaccineId], references: [id], onDelete: Restrict)
-  
+
   scheduleId      String?
   schedule        PosyanduSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
-  
+
   vaccinationDate DateTime
   status          VaccinationStatus @default(PENDING)
   notes           String?
   administeredBy  String?
-  
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@unique([childId, vaccineId, vaccinationDate])
   @@map("child_immunizations")
+}
+
+// ============================================
+// KPSP (Kuesioner Pra Skrining Perkembangan) MODELS
+// ============================================
+
+model KPSPAgeCategory {
+  id              String   @id @default(uuid())
+  code            String   @unique  
+  name            String   
+  minAgeMonths    Int      
+  maxAgeMonths    Int      
+  description     String?
+  isActive        Boolean  @default(true)
+
+  // Relations
+  questions       KPSPQuestion[]
+  screenings      KPSPScreening[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("kpsp_age_categories")
+}
+
+model KPSPQuestion {
+  id              String   @id @default(uuid())
+  categoryId      String
+  category        KPSPAgeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  questionNumber  Int      
+  questionText    String   
+  developmentArea String   
+  instruction     String?  
+
+  // Relations
+  answers         KPSPAnswer[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([categoryId, questionNumber])
+  @@map("kpsp_questions")
+}
+
+model KPSPScreening {
+  id              String   @id @default(uuid())
+  childId         String
+  child           ChildData @relation(fields: [childId], references: [id], onDelete: Cascade)
+  categoryId      String
+  category        KPSPAgeCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  screeningDate   DateTime @default(now())
+  ageAtScreening  Int      
+  totalYes        Int     
+  totalNo         Int      
+  result          KPSPResult
+  notes           String?
+  recommendedAction String?
+
+  // Relations
+  answers         KPSPAnswer[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("kpsp_screenings")
+}
+
+model KPSPAnswer {
+  id              String   @id @default(uuid())
+  screeningId     String
+  screening       KPSPScreening @relation(fields: [screeningId], references: [id], onDelete: Cascade)
+  questionId      String
+  question        KPSPQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  answer          Boolean  
+
+  createdAt       DateTime @default(now())
+
+  @@unique([screeningId, questionId])
+  @@map("kpsp_answers")
+}
+
+enum KPSPResult {
+  SESUAI              
+  MERAGUKAN           
+  PENYIMPANGAN        
 }
 
 // ============================================

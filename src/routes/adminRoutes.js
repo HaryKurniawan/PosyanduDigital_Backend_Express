@@ -5,14 +5,15 @@ const {
   getFamilyDataByChildId,
   getAllFamilies
 } = require('../controllers/adminController');
-const { protect, admin } = require('../middleware/authMiddleware');
+const { protect, adminOnly } = require('../middleware/authMiddleware');
 
+// Apply middleware to all routes in this router
+router.use(protect);
+router.use(adminOnly);
 
-router.use(protect, admin);
 // All routes require authentication and admin role
-router.get('/children', protect, admin, getAllChildren);
-router.get('/child/:childId/family-data', protect, admin, getFamilyDataByChildId);
-router.get('/families', protect, admin, getAllFamilies);
+router.get('/children', getAllChildren);
+router.get('/child/:childId/family-data', getFamilyDataByChildId);
+router.get('/families', getAllFamilies);
 
 module.exports = router;
-

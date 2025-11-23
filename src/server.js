@@ -3,11 +3,11 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const familyDataRoutes = require('./routes/familyDataRoutes');
-const adminRoutes = require('./routes/adminRoutes'); // NEW
+const adminRoutes = require('./routes/adminRoutes');
+const posyanduRoutes = require('./routes/posyanduRoutes');
+const kpspRoutes = require('./routes/kpspRoutes'); // ✅ TAMBAHKAN INI
 const prisma = require('./config/prisma');
 const { validateApiKey } = require('./middleware/apiKeyMiddleware');
-const posyanduRoutes = require('./routes/posyanduRoutes');
-
 
 dotenv.config();
 
@@ -27,7 +27,7 @@ app.use('/api/auth', validateApiKey, authRoutes);
 app.use('/api/family', validateApiKey, familyDataRoutes);
 app.use('/api/admin', validateApiKey, adminRoutes); 
 app.use('/api/posyandu', validateApiKey, posyanduRoutes);
-app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/kpsp', validateApiKey, kpspRoutes); // ✅ TAMBAHKAN INI
 
 const PORT = process.env.PORT || 5000;
 
@@ -38,6 +38,3 @@ app.listen(PORT, () => {
 process.on('beforeExit', async () => {
   await prisma.$disconnect();
 });
-
-// backend/server.js
-
