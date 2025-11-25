@@ -1,0 +1,27 @@
+const prisma = require('../../config/prisma');
+
+// Get all children with their family data
+const getAllChildren = async (req, res) => {
+  try {
+    const children = await prisma.childData.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.json(children);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+module.exports = getAllChildren;

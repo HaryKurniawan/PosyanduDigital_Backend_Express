@@ -5,7 +5,7 @@ const authRoutes = require('./routes/authRoutes');
 const familyDataRoutes = require('./routes/familyDataRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const posyanduRoutes = require('./routes/posyanduRoutes');
-const kpspRoutes = require('./routes/kpspRoutes'); // ✅ TAMBAHKAN INI
+const kpspRoutes = require('./routes/kpspRoutes'); 
 const prisma = require('./config/prisma');
 const { validateApiKey } = require('./middleware/apiKeyMiddleware');
 
@@ -27,7 +27,7 @@ app.use('/api/auth', validateApiKey, authRoutes);
 app.use('/api/family', validateApiKey, familyDataRoutes);
 app.use('/api/admin', validateApiKey, adminRoutes); 
 app.use('/api/posyandu', validateApiKey, posyanduRoutes);
-app.use('/api/kpsp', validateApiKey, kpspRoutes); // ✅ TAMBAHKAN INI
+app.use('/api/kpsp', validateApiKey, kpspRoutes);
 
 const PORT = process.env.PORT || 5000;
 
